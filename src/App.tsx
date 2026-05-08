@@ -149,15 +149,26 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <footer className="py-20 px-6 border-t border-apple-border text-center space-y-4 bg-white">
-        <div className="flex justify-center gap-6 text-apple-secondary">
-          <Globe className="w-5 h-5 cursor-pointer hover:text-apple-text transition-colors" />
-          <Plane className="w-5 h-5 cursor-pointer hover:text-apple-text transition-colors" />
-          <Zap className="w-5 h-5 cursor-pointer hover:text-apple-text transition-colors" />
+      <footer className="py-20 px-6 border-t border-apple-border text-center space-y-4 bg-white no-print">
+        <div className="flex justify-center gap-8 text-apple-secondary">
+          <a href="https://www.google.com" target="_blank" rel="noopener noreferrer" className="hover:text-apple-blue transition-all hover:scale-125" title="Google">
+            <Globe className="w-6 h-6" />
+          </a>
+          <a href="https://www.skyscanner.com" target="_blank" rel="noopener noreferrer" className="hover:text-apple-blue transition-all hover:scale-125" title="Skyscanner">
+            <Plane className="w-6 h-6" />
+          </a>
+          <a href="https://gemini.google.com" target="_blank" rel="noopener noreferrer" className="hover:text-apple-blue transition-all hover:scale-125" title="Gemini AI">
+            <Zap className="w-6 h-6" />
+          </a>
         </div>
-        <p className="text-xs font-mono uppercase tracking-widest text-apple-secondary/40">
-          © 2026 NomadAI. Built for the future of travel.
-        </p>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-apple-secondary/60">
+            Official Travel Partners & AI Powered by Gemini
+          </p>
+          <p className="text-[10px] font-mono text-apple-secondary/30">
+            © 2026 NomadAI. Built for the future of travel.
+          </p>
+        </div>
       </footer>
     </div>
   );

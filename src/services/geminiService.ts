@@ -1,4 +1,5 @@
 import { TravelPlan } from "../types";
+import { generateTravelPlan as generatePlanAI } from "./aiService";
 
 export async function generateTravelPlan(
   destination: string,
@@ -8,27 +9,16 @@ export async function generateTravelPlan(
   style: string = "balanced",
   travelers: string = "solo"
 ): Promise<TravelPlan> {
-  try {
-    const response = await fetch("/api/plan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ destination, duration, budget, interests, style, travelers }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || "Failed to generate travel plan");
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Travel Plan Generation Error:", error);
-    throw error;
-  }
+  return generatePlanAI(destination, duration, budget, interests, style, travelers);
 }
 
 export async function getWeatherData(lat: number, lon: number) {
   const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+  return response.json();
+}
+
+export async function getTimeData(lat: number, lon: number) {
+  const response = await fetch(`/api/time?lat=${lat}&lon=${lon}`);
   return response.json();
 }
 
