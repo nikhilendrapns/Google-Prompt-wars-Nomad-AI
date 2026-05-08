@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Send, MapPin, Calendar, Wallet, Compass } from "lucide-react";
+import { Send, MapPin, Calendar, Wallet, Compass, Users, Activity } from "lucide-react";
 import { motion } from "motion/react";
 
 interface TravelFormProps {
-  onSubmit: (destination: string, duration: number, budget: string, interests: string[]) => void;
+  onSubmit: (destination: string, duration: number, budget: string, interests: string[], style: string, travelers: string) => void;
   isLoading: boolean;
 }
 
@@ -11,19 +11,51 @@ export const TravelForm: React.FC<TravelFormProps> = ({ onSubmit, isLoading }) =
   const [destination, setDestination] = useState("");
   const [duration, setDuration] = useState(3);
   const [budget, setBudget] = useState("balanced");
+  const [style, setStyle] = useState("balanced");
+  const [travelers, setTravelers] = useState("solo");
   const [interests, setInterests] = useState<string[]>([]);
   const [currentInterest, setCurrentInterest] = useState("");
+  const [loadingMessage, setLoadingMessage] = useState("Consulting AI travel experts...");
+
+  const loadingMessages = [
+    "Consulting AI travel experts...",
+    "Finding hidden local gems...",
+    "Optimizing your route for speed...",
+    "Checking local weather patterns...",
+    "Curating unique experiences...",
+    "Finalizing your dream itinerary..."
+  ];
+
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading) {
+      let i = 0;
+      interval = setInterval(() => {
+        i = (i + 1) % loadingMessages.length;
+        setLoadingMessage(loadingMessages[i]);
+      }, 2000);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (destination) {
-      onSubmit(destination, duration, budget, interests);
+      onSubmit(destination, duration, budget, interests, style, travelers);
     }
   };
 
   const addInterest = () => {
-    if (currentInterest && !interests.includes(currentInterest)) {
-      setInterests([...interests, currentInterest]);
+    if (currentInterest) {
+      // Allow comma separated interests
+      const newInterests = currentInterest
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s && !interests.includes(s));
+      
+      if (newInterests.length > 0) {
+        setInterests([...interests, ...newInterests]);
+      }
       setCurrentInterest("");
     }
   };
@@ -57,32 +89,74 @@ export const TravelForm: React.FC<TravelFormProps> = ({ onSubmit, isLoading }) =
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-apple-secondary mb-1.5 ml-1">Duration (Days)</label>
+            <label htmlFor="duration-input" className="block text-[11px] font-bold uppercase tracking-wider text-apple-secondary mb-1.5 ml-1">Duration (1-14 Days)</label>
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-apple-secondary" />
               <input
+                id="duration-input"
                 type="number"
                 min="1"
                 max="14"
                 value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value))}
+                aria-label="Travel duration in days"
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) setDuration(Math.min(14, Math.max(1, val)));
+                }}
                 className="w-full pl-10 pr-4 py-3 bg-apple-bg border border-apple-border rounded-xl focus:ring-2 focus:ring-apple-blue/20 focus:outline-none text-apple-text"
               />
             </div>
           </div>
 
           <div className="relative">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-apple-secondary mb-1.5 ml-1">Budget</label>
+            <label htmlFor="budget-select" className="block text-[11px] font-bold uppercase tracking-wider text-apple-secondary mb-1.5 ml-1">Budget Tier</label>
             <div className="relative">
               <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-apple-secondary" />
               <select
+                id="budget-select"
                 value={budget}
+                aria-label="Travel budget level"
                 onChange={(e) => setBudget(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-apple-bg border border-apple-border rounded-xl focus:ring-2 focus:ring-apple-blue/20 focus:outline-none text-apple-text appearance-none"
               >
-                <option value="budget">Budget</option>
-                <option value="balanced">Balanced</option>
-                <option value="luxury">Luxury</option>
+                <option value="budget">Budget (Economy)</option>
+                <option value="balanced">Balanced (Mid-range)</option>
+                <option value="luxury">Luxury (Premium)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-apple-secondary mb-1.5 ml-1">Pacing & Style</label>
+            <div className="relative">
+              <Activity className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-apple-secondary" />
+              <select
+                value={style}
+                onChange={(e) => setStyle(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-apple-bg border border-apple-border rounded-xl focus:ring-2 focus:ring-apple-blue/20 focus:outline-none text-apple-text appearance-none"
+              >
+                <option value="relaxed">Relaxed (Slow Travel)</option>
+                <option value="balanced">Balanced (The Classics)</option>
+                <option value="fast-paced">Fast-paced (See it all)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="relative">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-apple-secondary mb-1.5 ml-1">Traveling As</label>
+            <div className="relative">
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-apple-secondary" />
+              <select
+                value={travelers}
+                onChange={(e) => setTravelers(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-apple-bg border border-apple-border rounded-xl focus:ring-2 focus:ring-apple-blue/20 focus:outline-none text-apple-text appearance-none"
+              >
+                <option value="solo">Solo Traveler</option>
+                <option value="couple">Couple</option>
+                <option value="family">Family (Kids)</option>
+                <option value="friends">Group of Friends</option>
               </select>
             </div>
           </div>
@@ -127,13 +201,16 @@ export const TravelForm: React.FC<TravelFormProps> = ({ onSubmit, isLoading }) =
       <button
         type="submit"
         disabled={isLoading || !destination}
-        className="w-full py-4 bg-apple-blue text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md"
+        className="w-full py-4 bg-apple-blue text-white font-bold rounded-xl flex items-center justify-center gap-3 hover:bg-blue-700 disabled:opacity-50 transition-all shadow-md overflow-hidden relative"
       >
         {isLoading ? (
-          <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <span className="animate-pulse">{loadingMessage}</span>
+          </div>
         ) : (
           <>
-            Generate Plan
+            Generate AI Itinerary
             <Send className="w-5 h-5" />
           </>
         )}

@@ -1,77 +1,38 @@
-import { GoogleGenAI, Type } from "@google/genai";
 import { TravelPlan } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
-const travelPlanSchema = {
-  type: Type.OBJECT,
-  properties: {
-    destination: { type: Type.STRING },
-    duration: { type: Type.NUMBER },
-    budget: { type: Type.STRING },
-    interests: { type: Type.ARRAY, items: { type: Type.STRING } },
-    itinerary: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          day: { type: Type.NUMBER },
-          activities: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                time: { type: Type.STRING },
-                description: { type: Type.STRING },
-                location: { type: Type.STRING },
-                estimatedCost: { type: Type.STRING },
-              },
-              required: ["time", "description", "location"],
-            },
-          },
-        },
-        required: ["day", "activities"],
-      },
-    },
-    tips: { type: Type.ARRAY, items: { type: Type.STRING } },
-    recommendedPlaces: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          name: { type: Type.STRING },
-          description: { type: Type.STRING },
-          category: { type: Type.STRING },
-        },
-        required: ["name", "description", "category"],
-      },
-    },
-  },
-  required: ["destination", "duration", "budget", "itinerary", "tips", "recommendedPlaces"],
-};
 
 export async function generateTravelPlan(
   destination: string,
   duration: number,
   budget: string,
-  interests: string[]
+  interests: string[],
+  style: string = "balanced",
+  travelers: string = "solo"
 ): Promise<TravelPlan> {
-  const prompt = `Generate a detailed travel itinerary for ${duration} days in ${destination} with a ${budget} budget. 
-  Interests: ${interests.join(", ")}. 
-  Provide specific activities with times, travel tips, and recommended places.`;
+  try {
+    const response = await fetch("/api/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destination, duration, budget, interests, style, travelers }),
+    });
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: travelPlanSchema,
-    },
-  });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to generate travel plan");
+    }
 
-  if (!response.text) {
-    throw new Error("Failed to generate travel plan");
+    return await response.json();
+  } catch (error) {
+    console.error("Travel Plan Generation Error:", error);
+    throw error;
   }
+}
 
-  return JSON.parse(response.text) as TravelPlan;
+export async function getWeatherData(lat: number, lon: number) {
+  const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`);
+  return response.json();
+}
+
+export async function getCountryData(name: string) {
+  const response = await fetch(`/api/country/${encodeURIComponent(name)}`);
+  return response.json();
 }
