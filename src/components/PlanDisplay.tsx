@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { TravelPlan } from "../types";
-import { motion } from "motion/react";
-import { Clock, MapPin, Lightbulb, Star, Navigation, Plane, ShieldCheck, Ticket } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { Clock, MapPin, Lightbulb, Star, Navigation, Plane, ShieldCheck, Ticket, Share2, Check } from "lucide-react";
 import { ConciergeInsights } from "./ConciergeInsights";
 
 interface PlanDisplayProps {
@@ -9,6 +9,22 @@ interface PlanDisplayProps {
 }
 
 export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    const url = new URL(window.location.href);
+    if ((plan as any).id) {
+      url.searchParams.set("voyage", (plan as any).id);
+      navigator.clipboard.writeText(url.toString());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      // If not saved yet, just copy current URL or prompt save
+      navigator.clipboard.writeText(url.toString());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
   return (
     <div className="w-full max-w-5xl mx-auto mt-16 space-y-16">
       <motion.div
@@ -39,6 +55,12 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan }) => {
               <div className="flex gap-2">
                 <span className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-[10px] font-bold uppercase tracking-widest leading-none flex items-center">{plan.travelers}</span>
                 <span className="px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-[10px] font-bold uppercase tracking-widest leading-none flex items-center">{plan.travelStyle}</span>
+                {(plan as any).id && (
+                  <span className="px-3 py-1 bg-green-500/20 border border-green-500/30 text-green-400 text-[10px] font-bold uppercase tracking-widest rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    Saved
+                  </span>
+                )}
               </div>
               <div className="space-y-2">
                 <span className="text-[11px] font-bold uppercase tracking-[0.4em] text-white/60">The Grand Itinerary</span>
@@ -47,11 +69,19 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan }) => {
                 </h2>
               </div>
             </div>
-            <div className="flex gap-4 mb-2 no-print">
+            <div className="flex gap-3 mb-2 no-print flex-wrap justify-end">
+              <button 
+                onClick={handleShare}
+                className="flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-full text-xs font-bold hover:bg-white/20 transition-all active:scale-95 shadow-lg"
+              >
+                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Share2 className="w-4 h-4" />}
+                {copied ? "Link Copied" : "Share Voyage"}
+              </button>
               <button 
                 onClick={() => window.print()}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-apple-text rounded-full text-xs font-bold hover:bg-apple-bg transition-all"
+                className="flex items-center gap-2 px-6 py-3 bg-white text-apple-text rounded-full text-xs font-bold hover:bg-neutral-100 transition-all active:scale-95 shadow-xl"
               >
+                <Ticket className="w-4 h-4" />
                 Export PDF
               </button>
             </div>
@@ -93,9 +123,14 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan }) => {
             >
               <div className="absolute -left-[11px] top-0 w-5 h-5 bg-apple-bg rounded-full border-[4px] border-apple-blue shadow-lg" />
               
-              <div className="space-y-2">
+              <div className="space-y-2 mb-4">
                 <div className="flex justify-between items-baseline">
-                  <h3 className="text-4xl font-sans font-medium text-apple-text tracking-tight italic">Day {day.day}</h3>
+                  <div className="flex items-baseline gap-4">
+                    <span className="text-8xl font-sans font-black text-apple-text/5 tracking-tighter absolute -left-4 -top-8 select-none">
+                      0{day.day}
+                    </span>
+                    <h3 className="text-4xl font-sans font-medium text-apple-text tracking-tight italic relative z-10">Day {day.day}</h3>
+                  </div>
                   <div className="px-3 py-1 bg-apple-bg rounded-full text-[10px] font-bold text-apple-blue uppercase tracking-widest border border-apple-blue/20">
                     {day.vibe}
                   </div>
@@ -121,11 +156,23 @@ export const PlanDisplay: React.FC<PlanDisplayProps> = ({ plan }) => {
                       </div>
                       
                       <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between mt-6 pt-6 border-t border-apple-bg">
-                        <div className="flex items-center gap-2 text-sm text-apple-secondary font-medium">
-                          <div className="p-2 bg-apple-bg rounded-full">
-                            <MapPin className="w-4 h-4 text-apple-blue" />
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2 text-sm text-apple-secondary font-medium">
+                            <div className="p-2 bg-apple-bg rounded-full">
+                              <MapPin className="w-4 h-4 text-apple-blue" />
+                            </div>
+                            {activity.location}
                           </div>
-                          {activity.location}
+                          <a 
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location + " " + plan.destination)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="no-print p-2 bg-apple-blue/5 hover:bg-apple-blue/10 text-apple-blue rounded-full transition-colors flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
+                            title="Open in Google Maps"
+                          >
+                            <Navigation className="w-3 h-3" />
+                            <span className="hidden sm:inline">Directions</span>
+                          </a>
                         </div>
                         {activity.travelTip && (
                           <div className="flex items-center gap-3 bg-blue-50/50 px-4 py-2 rounded-2xl border border-blue-100 italic text-xs text-apple-blue/80 font-medium">

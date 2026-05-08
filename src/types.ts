@@ -11,6 +11,7 @@ export interface ItineraryItem {
 }
 
 export interface TravelPlan {
+  id?: string;
   destination: string;
   duration: number;
   budget: "budget" | "balanced" | "luxury";

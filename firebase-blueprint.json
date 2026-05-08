@@ -1,0 +1,44 @@
+{
+  "entities": {
+    "TravelPlan": {
+      "title": "Travel Plan",
+      "description": "A generated travel itinerary for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who owns this plan" },
+        "destination": { "type": "string" },
+        "duration": { "type": "number" },
+        "budget": { "type": "string" },
+        "interests": { "type": "array", "items": { "type": "string" } },
+        "style": { "type": "string" },
+        "travelers": { "type": "string" },
+        "days": { "type": "array", "description": "The day-by-day itinerary" },
+        "insights": { "type": "object", "description": "AI-generated travel insights" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "destination", "days", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User preferences and basic info",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "plans/{planId}": {
+      "schema": "TravelPlan",
+      "description": "Travel plans"
+    }
+  }
+}

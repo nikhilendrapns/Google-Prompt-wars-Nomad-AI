@@ -1,33 +1,111 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { TravelForm } from "./components/TravelForm";
 import { PlanDisplay } from "./components/PlanDisplay";
 import { WeatherWidget } from "./components/WeatherWidget";
 import { generateTravelPlan } from "./services/geminiService";
 import { TravelPlan } from "./types";
-import { Globe, Plane, Coffee, Zap, ChevronDown } from "lucide-react";
+import { Globe, Plane, Coffee, Zap, ChevronDown, LogIn, LogOut, History, User } from "lucide-react";
+import { auth, signInWithGoogle, logout, saveTravelPlan, getUserPlans, getPlanById } from "./lib/firebase";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 
 export default function App() {
   const [plan, setPlan] = useState<TravelPlan | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [recentPlans, setRecentPlans] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Auth & Persistence Layer
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) {
+        loadUserPlans(u.uid);
+      }
+    });
+
+    const checkSharedPlan = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const sharedId = params.get("voyage");
+      if (sharedId) {
+        try {
+          setIsLoading(true);
+          const sharedPlan = await getPlanById(sharedId);
+          if (sharedPlan) {
+            setPlan(sharedPlan as any);
+            setTimeout(() => {
+              document.getElementById("itinerary")?.scrollIntoView({ behavior: "smooth" });
+            }, 500);
+          }
+        } catch (err) {
+          console.error("Error loading shared plan", err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        const cached = localStorage.getItem("travel_plan_cache");
+        if (cached) {
+          try {
+            setPlan(JSON.parse(cached));
+          } catch (e) {
+            localStorage.removeItem("travel_plan_cache");
+          }
+        }
+      }
+    };
+
+    checkSharedPlan();
+    
+    return () => unsubscribe();
+  }, []);
+
+  const loadUserPlans = async (uid: string) => {
+    try {
+      const plans = await getUserPlans(uid);
+      setRecentPlans(plans);
+    } catch (err) {
+      console.error("Failed to load plans", err);
+    }
+  };
 
   const handleGenerate = async (dest: string, dur: number, bud: string, ints: string[], style: string, travelers: string) => {
     setIsLoading(true);
     setError(null);
     try {
       const result = await generateTravelPlan(dest, dur, bud, ints, style, travelers);
-      setPlan(result);
+      
+      let finalPlan = result;
+      if (user) {
+        const planId = await saveTravelPlan(user.uid, result);
+        finalPlan = { ...result, id: planId };
+        loadUserPlans(user.uid);
+      }
+      
+      setPlan(finalPlan);
+      localStorage.setItem("travel_plan_cache", JSON.stringify(finalPlan));
+      
       // Scroll to result
       setTimeout(() => {
         document.getElementById("itinerary")?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
+      }, 500);
     } catch (err) {
       console.error(err);
       setError("Failed to create your itinerary. Please try a different destination or check your connection.");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const clearPlan = () => {
+    setPlan(null);
+    localStorage.removeItem("travel_plan_cache");
+    // Clear URL params without reloading
+    const url = new URL(window.location.href);
+    url.searchParams.delete("voyage");
+    window.history.replaceState({}, '', url.toString());
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -54,18 +132,101 @@ export default function App() {
           
           <div className="flex items-center gap-4 md:gap-8">
             <div className="hidden sm:flex gap-6 text-sm font-medium text-apple-secondary">
-              <a href="#itinerary" className="hover:text-apple-text transition-colors">My Plan</a>
-              <a href="#" className="hover:text-apple-text transition-colors">Guides</a>
+              {plan ? (
+                <button 
+                  onClick={clearPlan}
+                  className="hover:text-apple-blue transition-colors font-bold uppercase tracking-widest text-[10px]"
+                >
+                  New Plan
+                </button>
+              ) : (
+                <a href="#itinerary" className="hover:text-apple-text transition-colors">My Voyage</a>
+              )}
+              {user && (
+                <button 
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="hover:text-apple-text transition-colors flex items-center gap-2"
+                >
+                  <History className="w-4 h-4" />
+                  History
+                </button>
+              )}
             </div>
             <div className="h-6 w-px bg-apple-border hidden sm:block" />
-            <span className="text-[10px] font-mono text-apple-secondary bg-apple-bg px-2 py-1 rounded border border-apple-border font-bold uppercase tracking-widest">
-              v1.0.0
-            </span>
+            
+            {user ? (
+              <div className="flex items-center gap-4">
+                <img src={user.photoURL || ""} alt={user.displayName || "User"} className="w-8 h-8 rounded-full border border-apple-border" />
+                <button 
+                  onClick={logout}
+                  className="p-2 hover:bg-apple-bg rounded-full transition-colors text-apple-secondary"
+                  title="Logout"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={signInWithGoogle}
+                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest bg-apple-blue text-white px-4 py-2 rounded-full hover:bg-blue-600 transition-all shadow-md shadow-blue-500/20"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* History Sidebar */}
+      <AnimatePresence>
+        {showHistory && user && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowHistory(false)}
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60]"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl z-[70] p-8 overflow-y-auto no-print"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold tracking-tight">Recent Voyages</h2>
+                <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-apple-bg rounded-full transition-colors">&times;</button>
+              </div>
+              
+              <div className="space-y-4">
+                {recentPlans.length === 0 ? (
+                  <p className="text-apple-secondary text-center py-12">No saved plans yet. Start planning!</p>
+                ) : (
+                  recentPlans.map((p) => (
+                    <div 
+                      key={p.id}
+                      onClick={() => { setPlan(p); setShowHistory(false); }}
+                      className="group p-4 bg-apple-bg rounded-2xl border border-apple-border hover:border-apple-blue transition-all cursor-pointer"
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-apple-text">{p.destination}</h3>
+                        <span className="text-[10px] font-bold text-apple-blue px-2 py-0.5 bg-blue-50 rounded-full">{p.duration}d</span>
+                      </div>
+                      <p className="text-xs text-apple-secondary line-clamp-1">{p.style} voyage • {p.travelers}</p>
+                      <div className="mt-4 flex items-center gap-2 text-[10px] text-apple-secondary opacity-0 group-hover:opacity-100 transition-opacity uppercase font-bold tracking-widest">
+                        View Itinerary →
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
       <section className="relative pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto text-center space-y-8">
           <motion.div

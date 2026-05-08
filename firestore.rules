@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Entity Validations ---
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['displayName', 'email', 'createdAt']) &&
+             data.keys().size() <= 10 &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 100;
+    }
+
+    function isValidTravelPlan(data) {
+      return data.keys().hasAll(['userId', 'destination', 'days', 'createdAt', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.destination is string && data.destination.size() <= 200 &&
+             data.days is list && data.days.size() <= 14;
+    }
+
+    // --- Rules ---
+
+    // User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isVerified() && isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isVerified() && isOwner(userId) && isValidUserProfile(request.resource.data) &&
+                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL']);
+    }
+
+    // Travel Plans
+    match /plans/{planId} {
+      allow get: if true; // Allow public sharing via link
+      allow list: if isVerified() && query.limit <= 10; // Restricted listing
+      allow create: if isVerified() && isValidTravelPlan(request.resource.data);
+      allow delete: if isOwner(resource.data.userId);
+    }
+  }
+}
