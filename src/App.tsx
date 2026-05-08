@@ -177,8 +177,9 @@ export default function App() {
           </div>
         </div>
       </nav>
-
-      {/* History Sidebar */}
+      
+      <main id="main-content">
+        {/* History Sidebar */}
       <AnimatePresence>
         {showHistory && user && (
           <>
@@ -227,7 +228,7 @@ export default function App() {
           </>
         )}
       </AnimatePresence>
-      <section className="relative pt-32 pb-20 px-6">
+      <section className="relative pt-32 pb-20 px-6" aria-labelledby="main-heading">
         <div className="max-w-7xl mx-auto text-center space-y-8">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -239,6 +240,7 @@ export default function App() {
           </motion.div>
           
           <motion.h1
+            id="main-heading"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -310,6 +312,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      </main>
       <footer className="py-20 px-6 border-t border-apple-border text-center space-y-4 bg-white no-print">
         <div className="flex justify-center gap-8 text-apple-secondary">
           <a href="https://www.google.com" target="_blank" rel="noopener noreferrer" className="hover:text-apple-blue transition-all hover:scale-125" title="Google">
